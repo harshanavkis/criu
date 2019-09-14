@@ -8,6 +8,7 @@
 # The following contents are being anonymized:
 #     - Paths to files
 #     - All memory contents are just removed
+#     - All process names
 
 import hashlib
 import os
@@ -70,9 +71,34 @@ def page_anon(image):
 
     return image
 
+def core_anon(image):
+    regs = image['entries'][0]['thread_info']['gpregs']
+
+    for key in regs:
+        if key != 'mode':
+            regs[key] = 0
+    image['entries'][0]['thread_info']['gpregs'] = regs
+
+    proc_names = {}
+    checksum = hashlib.sha1()
+    tc = image['entries'][0]['tc']['comm']
+    if tc not in proc_names:
+        checksum.update(tc)
+        proc_names[tc] = checksum.hexdigest()
+    thread_core = image['entries'][0]['thread_core']['comm']
+    if thread_core not in proc_names:
+        checksum.update(thread_core)
+        proc_names[thread_core] = checksum.hexdigest()
+
+    image['entries'][0]['tc']['comm'] = proc_names[tc]
+    image['entries'][0]['thread_core']['comm'] = proc_names[thread_core]
+
+    return image
+
 anonymizers = {
     'FILES': files_anon,
-    'PAGEMAP': page_anon
+    'PAGEMAP': page_anon,
+    'CORE': core_anon
 }
 
 
