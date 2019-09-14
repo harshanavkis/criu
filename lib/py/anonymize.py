@@ -7,8 +7,10 @@
 
 # The following contents are being anonymized:
 #     - Paths to files
+#     - All memory contents are just removed
 
 import hashlib
+import os
 
 
 def files_anon(image):
@@ -57,16 +59,27 @@ def files_anon(image):
 
     return image
 
+def page_anon(image):
+    page_num  = image['entries'][0]['pages_id']
+    page_file = 'pages-{}.img'.format(page_num)
+    if os.stat(page_file).st_size > 0:
+        page_size = os.stat(page_file).st_size
+        image['entries'][0]['page_size'] = page_size
+    else:
+        print("Could not find page corresponding to page id:{}".format(pages_id))
+
+    return image
 
 anonymizers = {
-    'FILES': files_anon
+    'FILES': files_anon,
+    'PAGEMAP': page_anon
 }
 
 
 def anon_handler(image):
     magic = image['magic']
 
-    if magic != 'FILES':
+    if magic not in anonymizers:
         return -1
 
     handler = anonymizers[magic]

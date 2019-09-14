@@ -4,6 +4,7 @@ import "opts.proto";
 
 message pagemap_head {
 	required uint32 pages_id	= 1;
+	optional uint32 page_size       = 2;
 }
 
 message pagemap_entry {
