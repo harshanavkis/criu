@@ -9,10 +9,13 @@
 #     - Paths to files(unix files and regular files)
 #     - All memory contents are just removed
 #     - All process names
+#     - Registers
+#     - IP addresses
 
 import hashlib
 import os
 import copy
+import socket, struct
 
 
 def file_name_anon(file_list, ftype):
@@ -75,11 +78,12 @@ def file_name_anon(file_list, ftype):
 def files_anon(image):
     file_types = {}
     file_anons = {}
-    type_names = {'REG': 'reg', 'UNIXSK': 'usk'}
+    ftype_names = {'REG': 'reg', 'UNIXSK': 'usk'}
+    iptype_names = {'INETSK': 'isk'}
 
     for e in image['entries']:
-        if e['type'] in type_names:
-            tname = type_names[e['type']]
+        if e['type'] in ftype_names:
+            tname = ftype_names[e['type']]
             if tname not in file_types:
                 file_types[tname] = []
             file_types[tname].append(e[tname]['name'])
@@ -91,11 +95,21 @@ def files_anon(image):
         file_anons[ft] = dict(zip(file_types[ft], file_anons[ft]))
 
     for i, e in enumerate(image['entries']):
-        if e['type'] in type_names:
-            tname = type_names[e['type']]
-            fname = e[tname]['name']
-            if e['type'] in type_names:
-                image['entries'][i][tname]['name'] = file_anons[tname][fname]
+        tname = e['type']
+        if tname in ftype_names:
+            ename = ftype_names[tname]
+            fname = e[ename]['name']
+            if e['type'] in ftype_names:
+                image['entries'][i][ename]['name'] = file_anons[ename][fname]
+        if tname in iptype_names:
+            ename = iptype_names[tname]
+            num_ips_src = len(image['entries'][i][ename]['src_addr'])
+            num_ips_dst = len(image['entries'][i][ename]['dst_addr'])
+            src_ips_ano = [unicode('0.0.0.0')]*num_ips_src
+            dst_ips_ano = [unicode('0.0.0.0')]*num_ips_dst
+
+            image['entries'][i][ename]['src_addr'] = src_ips_ano
+            image['entries'][i][ename]['dst_addr'] = dst_ips_ano
 
     return image
 
