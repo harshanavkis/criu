@@ -1728,7 +1728,18 @@ int open_path(struct file_desc *d,
 
 	mntns_root = mntns_get_root_by_mnt_id(rfi->rfe->mnt_id);
 ext:
-	tmp = open_cb(mntns_root, rfi, arg);
+	if(opts.anonymize){
+		u32 flags = rfi->rfe->flags;
+		flags &= ~O_TMPFILE;
+
+		tmp = openat(mntns_root, "/dev/zero", flags);
+		if(tmp < 0){
+			pr_perror("Unable to create a fake file descriptor");
+		}
+		pr_info("Restoring anonymized file paths.\n");
+	}
+	else
+		tmp = open_cb(mntns_root, rfi, arg);
 	if (tmp < 0) {
 		pr_perror("Can't open file %s", rfi->path);
 		close_safe(&inh_fd);
@@ -1736,35 +1747,37 @@ ext:
 	}
 	close_safe(&inh_fd);
 
-	if ((rfi->rfe->has_size || rfi->rfe->has_mode) &&
+	if(!opts.anonymize){
+		if ((rfi->rfe->has_size || rfi->rfe->has_mode) &&
 	    !rfi->size_mode_checked) {
-		struct stat st;
+			struct stat st;
 
-		if (fstat(tmp, &st) < 0) {
-			pr_perror("Can't fstat opened file");
-			return -1;
+			if (fstat(tmp, &st) < 0) {
+				pr_perror("Can't fstat opened file");
+				return -1;
+			}
+
+			if (rfi->rfe->has_size && (st.st_size != rfi->rfe->size)) {
+				pr_err("File %s has bad size %"PRIu64" (expect %"PRIu64")\n",
+						rfi->path, st.st_size,
+						rfi->rfe->size);
+				return -1;
+			}
+
+			if (rfi->rfe->has_mode && (st.st_mode != rfi->rfe->mode)) {
+				pr_err("File %s has bad mode 0%o (expect 0%o)\n",
+				       rfi->path, (int)st.st_mode,
+				       rfi->rfe->mode);
+				return -1;
+			}
+
+			/*
+			 * This is only visible in the current process, so
+			 * change w/o locks. Other tasks sharing the same
+			 * file will get one via unix sockets.
+			 */
+			rfi->size_mode_checked = true;
 		}
-
-		if (rfi->rfe->has_size && (st.st_size != rfi->rfe->size)) {
-			pr_err("File %s has bad size %"PRIu64" (expect %"PRIu64")\n",
-					rfi->path, st.st_size,
-					rfi->rfe->size);
-			return -1;
-		}
-
-		if (rfi->rfe->has_mode && (st.st_mode != rfi->rfe->mode)) {
-			pr_err("File %s has bad mode 0%o (expect 0%o)\n",
-			       rfi->path, (int)st.st_mode,
-			       rfi->rfe->mode);
-			return -1;
-		}
-
-		/*
-		 * This is only visible in the current process, so
-		 * change w/o locks. Other tasks sharing the same
-		 * file will get one via unix sockets.
-		 */
-		rfi->size_mode_checked = true;
 	}
 
 	if (rfi->remap) {
