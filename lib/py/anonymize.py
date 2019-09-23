@@ -11,11 +11,13 @@
 #     - All process names
 #     - Registers
 #     - IP addresses
+#     - stream data(fifo, pipe, queue, tcp)
 
 import hashlib
 import os
 import copy
 import socket, struct
+import random
 
 
 def file_name_anon(file_list, ftype):
@@ -152,10 +154,44 @@ def core_anon(image):
     return image
 
 
+def hide_stream(stream_data):
+    if len(stream_data) == 0:
+        return stream_data
+
+    stream_data = stream_data.replace('\n', '').replace('=', '')
+    stream_data = '0'*len(stream_data)
+    if len(stream_data)%4 != 0:
+        pad = len(stream_data)%4
+        stream_data += '='*pad
+
+    return stream_data
+
+
+def stream_anon(image):
+    for i, e in enumerate(image['entries']):
+        image['entries'][i]['extra'] = hide_stream(e['extra'])
+
+    return image
+
+
+def tcp_stream_anon(image):
+    for i, e in enumerate(image['entries']):
+        image['entries'][i]['extra']['outq'] = hide_stream(
+            e['extra']['outq'])
+        image['entries'][i]['extra']['inq'] = hide_stream(
+            e['extra']['inq'])
+
+    return image
+
+
 anonymizers = {
     'FILES': files_anon,
     'PAGEMAP': page_anon,
-    'CORE': core_anon
+    'CORE': core_anon,
+    'PIPES_DATA': stream_anon,
+    'FIFO_DATA': stream_anon,
+    'SK_QUEUES': stream_anon,
+    'TCP_STREAM': tcp_stream_anon
 }
 
 

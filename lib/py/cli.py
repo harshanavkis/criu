@@ -352,6 +352,8 @@ def anonymize(opts):
             anon_dict = anon_handler(img)
             if anon_dict != -1:
                 pycriu.images.dump(anon_dict, outf(inf_opts))
+            else:
+                pycriu.images.dump(img, outf(inf_opts))
         except pycriu.images.MagicException as exc:
             print("Unknown magic %#x.\n"
                 "Found a raw image" % exc.magic, file=sys.stderr)
