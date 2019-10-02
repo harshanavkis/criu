@@ -1564,12 +1564,15 @@ long __export_restore_task(struct task_restore_args *args)
 					(unsigned long)iovs->iov_base,
 					(int)iovs->iov_len, nr);
 			r = sys_preadv(args->vma_ios_fd, iovs, nr, rio->off);
-			if (r < 0) {
+			if (r < 0 && !args->anonymize) {
 				pr_err("Can't read pages data (%d)\n", (int)r);
 				goto core_restore_end;
 			}
 
-			pr_debug("`- returned %ld\n", (long)r);
+			if (!args->anonymize)
+				pr_debug("`- returned %ld\n", (long)r);
+			else
+				pr_debug("`- returned anonymized value\n");
 			/* If the file is open for writing, then it means we should punch holes
 			 * in it. */
 			if (r > 0 && args->auto_dedup) {
@@ -1606,7 +1609,7 @@ long __export_restore_task(struct task_restore_args *args)
 	 */
 	if (vdso_proxify(&args->vdso_maps_rt,  &has_vdso_proxy,
 			 args->vmas, args->vmas_n, args->compatible_mode,
-		         fault_injected(FI_VDSO_TRAMPOLINES)))
+		         fault_injected(FI_VDSO_TRAMPOLINES), args->anonymize))
 		goto core_restore_end;
 
 	/* unmap rt-vdso with restorer blob after restore's finished */

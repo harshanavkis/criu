@@ -87,7 +87,7 @@ extern int vdso_do_park(struct vdso_maps *rt, unsigned long park_at,
 extern int vdso_map_compat(unsigned long map_at);
 extern int vdso_proxify(struct vdso_maps *rt, bool *added_proxy,
 			VmaEntry *vmas, size_t nr_vmas,
-			bool compat_vdso, bool force_trampolines);
+			bool compat_vdso, bool force_trampolines, bool anon);
 extern int vdso_redirect_calls(unsigned long base_to, unsigned long base_from,
 			struct vdso_symtable *to, struct vdso_symtable *from,
 			bool compat_vdso);

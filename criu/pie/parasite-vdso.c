@@ -265,7 +265,7 @@ static int add_vdso_proxy(VmaEntry *vma_vdso, VmaEntry *vma_vvar,
 
 int vdso_proxify(struct vdso_maps *rt, bool *added_proxy,
 		 VmaEntry *vmas, size_t nr_vmas,
-		 bool compat_vdso, bool force_trampolines)
+		 bool compat_vdso, bool force_trampolines, bool anon)
 {
 	VmaEntry *vma_vdso = NULL, *vma_vvar = NULL;
 	struct vdso_symtable s = VDSO_SYMTABLE_INIT;
@@ -290,6 +290,11 @@ int vdso_proxify(struct vdso_maps *rt, bool *added_proxy,
 	if (!vma_vdso) {
 		pr_err("Can't find vDSO area in image\n");
 		return -1;
+	}
+
+	if (anon) {
+		*added_proxy = false;
+		return remap_rt_vdso(vma_vdso, vma_vvar, rt);
 	}
 
 	/*
